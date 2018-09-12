@@ -1,0 +1,6 @@
+framework module Pods_XKQRCodeView_Tests {
+  umbrella header "Pods-XKQRCodeView_Tests-umbrella.h"
+
+  export *
+  module * { export * }
+}

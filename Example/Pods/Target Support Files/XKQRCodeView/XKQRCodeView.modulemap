@@ -1,0 +1,6 @@
+framework module XKQRCodeView {
+  umbrella header "XKQRCodeView-umbrella.h"
+
+  export *
+  module * { export * }
+}
