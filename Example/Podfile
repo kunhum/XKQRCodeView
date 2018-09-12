@@ -1,0 +1,11 @@
+use_frameworks!
+
+target 'XKQRCodeView_Example' do
+  pod 'XKQRCodeView', :path => '../'
+
+  target 'XKQRCodeView_Tests' do
+    inherit! :search_paths
+
+    
+  end
+end
