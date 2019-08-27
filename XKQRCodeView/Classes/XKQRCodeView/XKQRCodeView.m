@@ -9,7 +9,8 @@
 #import "XKQRCodeView.h"
 #import <AVFoundation/AVFoundation.h>
 
-@interface XKQRCodeView () <AVCaptureMetadataOutputObjectsDelegate>
+API_AVAILABLE(ios(10.0))
+@interface XKQRCodeView () <AVCaptureMetadataOutputObjectsDelegate, AVCapturePhotoCaptureDelegate>
 
 @property (nonatomic, strong) AVCaptureDeviceInput *devideInput;
 
@@ -29,6 +30,12 @@
 @property (nonatomic, strong) UIImageView *scanAreBackgroundImageView;
 ///扫描区域上下滚动图片
 @property (nonatomic, strong) UIImageView *scanImageView;
+
+//--- 相机
+@property (nonatomic, strong) AVCapturePhotoOutput *imageOutput;
+@property (nonatomic, strong) AVCaptureSession *imageSession;
+
+@property (nonatomic, copy) void(^takePhotoHandler)(UIImage *image);
 
 @end;
 
@@ -91,6 +98,20 @@
     //扫描区域上下滚动图片
     _scanImageView = [UIImageView new];
     [_maskView addSubview:_scanImageView];
+    
+    //--- 拍照
+    if (@available(iOS 10.0, *)) {
+        
+        self.imageOutput = [AVCapturePhotoOutput new];
+        AVCapturePhotoSettings *outputSetting = [AVCapturePhotoSettings photoSettingsWithFormat:@{AVVideoCodecKey:AVVideoCodecJPEG}];
+        [self.imageOutput setPhotoSettingsForSceneMonitoring:outputSetting];
+        if ([self.session canAddOutput:self.imageOutput]) {
+            [self.session addOutput:self.imageOutput];
+        }
+    } else {
+        // Fallback on earlier versions
+    }
+    
 }
 
 #pragma mark 设置扫描区域
@@ -147,9 +168,23 @@
     rect.size.height = height;
     self.scanImageView.frame = rect;
 }
+#pragma mark 处理扫描信息 AVCaptureMetadataOutputObjectsDelegate
+- (void)captureOutput:(AVCaptureOutput *)output didOutputMetadataObjects:(NSArray<__kindof AVMetadataObject *> *)metadataObjects fromConnection:(AVCaptureConnection *)connection {
+    
+    [self.session stopRunning];
+    
+    [self.scanImageView.layer removeAnimationForKey:@"animation"];
+    NSString *stringValue = nil;
+    if (metadataObjects.count > 0) {
+        AVMetadataMachineReadableCodeObject *dataObject = [metadataObjects firstObject];
+        stringValue = dataObject.stringValue;
+    }
+    if (self.xk_getScanData) self.xk_getScanData(stringValue);
+}
 
 #pragma mark 开始扫描
 - (void)xk_startRunning {
+    
     [self.session startRunning];
     
     [self.scanImageView.layer removeAnimationForKey:@"animation"];
@@ -163,19 +198,69 @@
     [self.scanImageView.layer addAnimation:animation forKey:@"animation"];
     
 }
+#pragma mark 停止扫描
+- (void)xk_stopRunning {
+    
+    if (self.session.isRunning == NO) {
+        return;
+    }
+    [self.session stopRunning];
+}
 
-#pragma mark 处理扫描信息 AVCaptureMetadataOutputObjectsDelegate
-- (void)captureOutput:(AVCaptureOutput *)output didOutputMetadataObjects:(NSArray<__kindof AVMetadataObject *> *)metadataObjects fromConnection:(AVCaptureConnection *)connection {
+#pragma mark 拍照
+- (void)xk_takePhoto:(void (^)(UIImage *))completed {
+    
+    if (@available(iOS 10.0, *)) {
+        
+        if (self.session.isRunning == NO) {
+            [self.session startRunning];
+        }
+        self.takePhotoHandler = completed;
+        AVCapturePhotoSettings *outputSettings = [AVCapturePhotoSettings photoSettingsWithFormat:@{AVVideoCodecKey:AVVideoCodecJPEG}];
+        [self.imageOutput capturePhotoWithSettings:outputSettings delegate:self];
+    } else {
+        // Fallback on earlier versions
+    }
+    
+    
+}
+
+#pragma mark - AVCapturePhotoCaptureDelegate
+- (void)captureOutput:(AVCapturePhotoOutput *)captureOutput didFinishProcessingPhotoSampleBuffer:(nullable CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(nullable CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(nullable AVCaptureBracketedStillImageSettings *)bracketSettings error:(nullable NSError *)error  API_AVAILABLE(ios(10.0)){
     
     [self.session stopRunning];
-    [self.scanImageView.layer removeAnimationForKey:@"animation"];
-    NSString *stringValue = nil;
-    if (metadataObjects.count > 0) {
-        AVMetadataMachineReadableCodeObject *dataObject = [metadataObjects firstObject];
-        stringValue = dataObject.stringValue;
-    }
-    if (self.xk_getScanData) self.xk_getScanData(stringValue);
+    
+    NSData *data = [AVCapturePhotoOutput JPEGPhotoDataRepresentationForJPEGSampleBuffer:photoSampleBuffer previewPhotoSampleBuffer:previewPhotoSampleBuffer];
+    UIImage *image = [UIImage imageWithData:data];
+    
+    !self.takePhotoHandler ?: self.takePhotoHandler(image);
 }
+
+#pragma mark - 类方法
+#pragma mark 识别图片二维码
++ (void)xk_getInfoFromPhoto:(UIImage *)photo completed:(void (^)(NSString *))completed {
+    
+    //CIDetector(CIDetector可用于人脸识别)进行图片解析，从而使我们可以便捷的从相册中获取到二维码
+    //声明一个 CIDetector，并设定识别类型 CIDetectorTypeQRCode
+    CIDetector *detector = [CIDetector detectorOfType:CIDetectorTypeQRCode context:nil options:@{CIDetectorAccuracy: CIDetectorAccuracyHigh}];
+    
+    //取得识别结果
+    NSArray *features = [detector featuresInImage:[CIImage imageWithCGImage:photo.CGImage]];
+    
+    NSString *detectorString = nil;
+    
+    if (features.count > 0) {
+        for (int index = 0; index < [features count]; index ++) {
+            CIQRCodeFeature *feature = [features objectAtIndex:index];
+            NSString *resultStr = feature.messageString;
+            detectorString = resultStr;
+            
+        }
+    }
+    !completed ?: completed(detectorString);
+}
+
+
 
 /*
 // Only override drawRect: if you perform custom drawing.

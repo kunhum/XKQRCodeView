@@ -22,9 +22,17 @@
 ///获取扫描信息
 @property (nonatomic, copy) void(^xk_getScanData)(NSString *stringValue);
 
-- (instancetype)initWithFrame:(CGRect)frame scanArea:(CGRect)scanArea;
+///识别图片中的二维码
++ (void)xk_getInfoFromPhoto:(UIImage *)photo completed:(void(^)(NSString *stringValue))completed;
 
+///初始化
+- (instancetype)initWithFrame:(CGRect)frame scanArea:(CGRect)scanArea;
 ///开始扫描
 - (void)xk_startRunning;
+///停止扫描
+- (void)xk_stopRunning;
+
+///拍照、 iOS10之后生效
+- (void)xk_takePhoto:(void(^)(UIImage *image))completed;
 
 @end
