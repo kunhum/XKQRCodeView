@@ -11,36 +11,36 @@
 
 API_AVAILABLE(ios(10.0))
 @interface XKQRCodeView () <AVCaptureMetadataOutputObjectsDelegate, AVCapturePhotoCaptureDelegate>
-
-@property (nonatomic, strong) AVCaptureDeviceInput *devideInput;
-
-@property (nonatomic, strong) AVCaptureMetadataOutput *metaDataOutput;
-
-///输入输出的中间桥梁
-@property (nonatomic, strong) AVCaptureSession *session;
-
-@property (nonatomic, strong) AVCaptureDevice *device;
-
-@property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
-
-///遮罩的view
-@property (nonatomic, strong) UIView *maskView;
-@property (nonatomic, strong) CAShapeLayer *maskLayer;
-///扫描区域的背景图片
-@property (nonatomic, strong) UIImageView *scanAreBackgroundImageView;
-///扫描区域上下滚动图片
-@property (nonatomic, strong) UIImageView *scanImageView;
-
-//--- 相机
-@property (nonatomic, strong) AVCapturePhotoOutput *imageOutput;
-@property (nonatomic, strong) AVCaptureSession *imageSession;
-
-@property (nonatomic, copy) void(^takePhotoHandler)(UIImage *image);
-
-@end;
+    
+    @property (nonatomic, strong) AVCaptureDeviceInput *devideInput;
+    
+    @property (nonatomic, strong) AVCaptureMetadataOutput *metaDataOutput;
+    
+    ///输入输出的中间桥梁
+    @property (nonatomic, strong) AVCaptureSession *session;
+    
+    @property (nonatomic, strong) AVCaptureDevice *device;
+    
+    @property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
+    
+    ///遮罩的view
+    @property (nonatomic, strong) UIView *maskView;
+    @property (nonatomic, strong) CAShapeLayer *maskLayer;
+    ///扫描区域的背景图片
+    @property (nonatomic, strong) UIImageView *scanAreBackgroundImageView;
+    ///扫描区域上下滚动图片
+    @property (nonatomic, strong) UIImageView *scanImageView;
+    
+    //--- 相机
+    @property (nonatomic, strong) AVCapturePhotoOutput *imageOutput;
+    @property (nonatomic, strong) AVCaptureSession *imageSession;
+    
+    @property (nonatomic, copy) void(^takePhotoHandler)(UIImage *image);
+    
+    @end;
 
 @implementation XKQRCodeView
-
+    
 - (instancetype)initWithFrame:(CGRect)frame scanArea:(CGRect)scanArea {
     
     if (self = [super initWithFrame:frame]) {
@@ -54,7 +54,7 @@ API_AVAILABLE(ios(10.0))
     }
     return self;
 }
-
+    
 #pragma mark - 配置UI
 - (void)setupUI {
     
@@ -113,7 +113,7 @@ API_AVAILABLE(ios(10.0))
     }
     
 }
-
+    
 #pragma mark 设置扫描区域
 - (void)setScanArea:(CGRect)scanArea {
     _scanArea = scanArea;
@@ -134,7 +134,7 @@ API_AVAILABLE(ios(10.0))
     _scanImageView.frame = CGRectMake(scanArea.origin.x, scanArea.origin.y, scanArea.size.width, 4);
     
 }
-
+    
 #pragma mark 设置透明度
 - (void)setScanExternalAlpha:(CGFloat)scanExternalAlpha {
     _scanExternalAlpha = scanExternalAlpha;
@@ -150,20 +150,20 @@ API_AVAILABLE(ios(10.0))
     [self.maskView.layer addSublayer:_maskLayer];
     
 }
-
+    
 #pragma mark 设置扫描区域背景图片
 - (void)setScanAreBackgroundImage:(UIImage *)scanAreBackgroundImage {
     _scanAreBackgroundImage = [scanAreBackgroundImage resizableImageWithCapInsets:UIEdgeInsetsMake(0.5, 0.5, 0.5, 0.5) resizingMode:UIImageResizingModeStretch];
     self.scanAreBackgroundImageView.image = _scanAreBackgroundImage;
 }
-
+    
 #pragma mark 设置扫描区域上下滚动图片
 - (void)setScanImage:(UIImage *)scanImage {
     _scanImage = [scanImage resizableImageWithCapInsets:UIEdgeInsetsMake(0.5, 0.5, 0.5, 0.5) resizingMode:UIImageResizingModeStretch];
     CGSize originSize = scanImage.size;
     CGFloat height = self.scanArea.size.width*originSize.height/originSize.width;
     self.scanImageView.image = _scanImage;
-//    [self.scanImageView sizeToFit];
+    //    [self.scanImageView sizeToFit];
     CGRect rect = self.scanImageView.frame;
     rect.size.height = height;
     self.scanImageView.frame = rect;
@@ -171,19 +171,26 @@ API_AVAILABLE(ios(10.0))
 #pragma mark 处理扫描信息 AVCaptureMetadataOutputObjectsDelegate
 - (void)captureOutput:(AVCaptureOutput *)output didOutputMetadataObjects:(NSArray<__kindof AVMetadataObject *> *)metadataObjects fromConnection:(AVCaptureConnection *)connection {
     
-    [self.session stopRunning];
-    
-    [self.scanImageView.layer removeAnimationForKey:@"animation"];
-    NSString *stringValue = nil;
-    if (metadataObjects.count > 0) {
-        AVMetadataMachineReadableCodeObject *dataObject = [metadataObjects firstObject];
-        stringValue = dataObject.stringValue;
+    if (self.scanType == XKQRCodeScanTypeScan) {
+        
+        [self.session stopRunning];
+        
+        [self.scanImageView.layer removeAnimationForKey:@"animation"];
+        NSString *stringValue = nil;
+        if (metadataObjects.count > 0) {
+            AVMetadataMachineReadableCodeObject *dataObject = [metadataObjects firstObject];
+            stringValue = dataObject.stringValue;
+        }
+        if (self.xk_getScanData) self.xk_getScanData(stringValue);
     }
-    if (self.xk_getScanData) self.xk_getScanData(stringValue);
 }
-
+    
 #pragma mark 开始扫描
 - (void)xk_startRunning {
+    
+    if (self.session.isRunning) {
+        return;
+    }
     
     [self.session startRunning];
     
@@ -192,7 +199,7 @@ API_AVAILABLE(ios(10.0))
     animation.keyPath = @"position.y";
     animation.fromValue = @(self.scanArea.origin.y+CGRectGetHeight(self.scanImageView.frame)/2.0);
     animation.toValue = @(self.scanArea.size.height+self.scanArea.origin.y-CGRectGetHeight(self.scanImageView.frame)/2.0);
-//    animation.autoreverses = YES;
+    //    animation.autoreverses = YES;
     animation.repeatCount = CGFLOAT_MAX;
     animation.duration = 1.5;
     [self.scanImageView.layer addAnimation:animation forKey:@"animation"];
@@ -206,7 +213,7 @@ API_AVAILABLE(ios(10.0))
     }
     [self.session stopRunning];
 }
-
+    
 #pragma mark 拍照
 - (void)xk_takePhoto:(void (^)(UIImage *))completed {
     
@@ -224,7 +231,7 @@ API_AVAILABLE(ios(10.0))
     
     
 }
-
+    
 #pragma mark - AVCapturePhotoCaptureDelegate
 - (void)captureOutput:(AVCapturePhotoOutput *)captureOutput didFinishProcessingPhotoSampleBuffer:(nullable CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(nullable CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(nullable AVCaptureBracketedStillImageSettings *)bracketSettings error:(nullable NSError *)error  API_AVAILABLE(ios(10.0)){
     
@@ -235,7 +242,7 @@ API_AVAILABLE(ios(10.0))
     
     !self.takePhotoHandler ?: self.takePhotoHandler(image);
 }
-
+    
 #pragma mark - 类方法
 #pragma mark 识别图片二维码
 + (void)xk_getInfoFromPhoto:(UIImage *)photo completed:(void (^)(NSString *))completed {
@@ -259,15 +266,15 @@ API_AVAILABLE(ios(10.0))
     }
     !completed ?: completed(detectorString);
 }
-
-
-
-/*
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
-- (void)drawRect:(CGRect)rect {
-    // Drawing code
-}
-*/
-
-@end
+    
+    
+    
+    /*
+     // Only override drawRect: if you perform custom drawing.
+     // An empty implementation adversely affects performance during animation.
+     - (void)drawRect:(CGRect)rect {
+     // Drawing code
+     }
+     */
+    
+    @end

@@ -1,5 +1,5 @@
 PODS:
-  - XKQRCodeView (1.0.0)
+  - XKQRCodeView (1.0.4)
 
 DEPENDENCIES:
   - XKQRCodeView (from `../`)
@@ -9,8 +9,8 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  XKQRCodeView: 7ba26770c911f44a9112c4112a5e488433a74fcd
+  XKQRCodeView: a08ae5bd0766d48c74afb041aeabd92b374bb281
 
 PODFILE CHECKSUM: f53854eeb17c565a6be32b9ff126336fb40a729b
 
-COCOAPODS: 1.5.2
+COCOAPODS: 1.7.1
